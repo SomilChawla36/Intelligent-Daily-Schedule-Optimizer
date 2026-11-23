@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Study Timetable - Student Portal</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Student Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">S</div>
+            <div class="brand-text">
+                <h2>Student Portal</h2>
+                <span id="userDisplayRole">Roll: Loading...</span>
+            </div>
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="/student-dashboard.html">📊 My Performance</a></li>
+            <li><a href="/student-schedule.html" class="active">⏰ My Study Timetable</a></li>
+        </ul>
+
+        <!-- Clean User Profile & Logout -->
+        <div class="sidebar-footer">
+            <p id="userDisplayName" style="font-weight: 600; color: var(--text-dark); margin-bottom: 4px;">Student</p>
+            <button onclick="logout()" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 6px; font-size: 11.5px;">
+                🚪 Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Personalized Daily Study Timetable</h1>
+            <p>Tell the optimizer how much time you have today. It automatically distributes study hours, giving more time to your weaker subjects.</p>
+        </div>
+
+        <div id="studentScheduleAlert" class="alert"></div>
+
+        <!-- Hours Input Card -->
+        <div class="card">
+            <div class="card-title">Study Hours Setting</div>
+
+            <form id="studentScheduleForm">
+                <div style="display: flex; gap: 14px; align-items: flex-end; max-width: 500px;">
+                    <div class="form-group" style="flex-grow: 1;">
+                        <label for="studentHoursInput">How many hours can you study today?</label>
+                        <input type="number" id="studentHoursInput" step="0.5" min="1" max="16" value="4.0" required>
+                        <small>Enter total hours available for self-study today (e.g. 3, 4, 5.5).</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="padding: 10px 20px; font-size: 13.5px; height: 42px;">
+                        ⚡ Generate Plan
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Generated Timetable Card -->
+        <div id="studentScheduleCard" class="card" style="display: none;">
+            <div class="card-title">
+                <span>Today's Study Plan</span>
+                <span id="hoursPlannedBadge" class="badge badge-rank-2">4.0 Hours</span>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">Slot</th>
+                            <th>Subject / Activity</th>
+                            <th>Priority</th>
+                            <th>Allocated Duration</th>
+                            <th>Mentor Study Strategy</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentScheduleTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Personalized Advice Box -->
+            <div class="advice-box">
+                <h4>🎯 Personalized Study Recommendation:</h4>
+                <p id="studentAdviceText"></p>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let studentRollNumber = '';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = checkAuth('STUDENT');
+            if (!user) return;
+
+            studentRollNumber = user.rollNumber;
+            if (studentRollNumber) {
+                // Auto generate initial 4-hour plan
+                generateForStudent(4.0);
+            }
+        });
+
+        document.getElementById('studentScheduleForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const hours = parseFloat(document.getElementById('studentHoursInput').value);
+            generateForStudent(hours);
+        });
+
+        async function generateForStudent(hours) {
+            try {
+                const data = await API.generateSchedule(studentRollNumber, hours);
+                renderTimetable(data);
+            } catch (err) {
+                showAlert('studentScheduleAlert', err.message, false);
+            }
+        }
+
+        function renderTimetable(data) {
+            document.getElementById('studentScheduleCard').style.display = 'block';
+            document.getElementById('hoursPlannedBadge').textContent = `${data.availableHours} Hours Planned`;
+            document.getElementById('studentAdviceText').textContent = data.summaryAdvice;
+
+            const tbody = document.getElementById('studentScheduleTableBody');
+            tbody.innerHTML = '';
+
+            if (!data.slots || data.slots.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">No slots generated. Please ask your faculty to upload your marks first.</td></tr>';
+                return;
+            }
+
+            data.slots.forEach((slot, index) => {
+                const tr = document.createElement('tr');
+                let badgeClass = 'badge-priority-low';
+                if (slot.priority === 'HIGH') badgeClass = 'badge-priority-high';
+                else if (slot.priority === 'MEDIUM') badgeClass = 'badge-priority-medium';
+                else if (slot.isBreak) badgeClass = 'badge-break';
+
+                if (slot.isBreak) {
+                    tr.style.backgroundColor = '#f8fafc';
+                }
+
+                tr.innerHTML = `
+                    <td><strong>#${index + 1}</strong></td>
+                    <td><strong>${slot.subjectName}</strong></td>
+                    <td><span class="badge ${badgeClass}">${slot.priority}</span></td>
+                    <td><strong>${slot.durationMinutes} mins</strong></td>
+                    <td style="color: ${slot.isBreak ? 'var(--text-muted)' : 'var(--text-dark)'};">${slot.focusArea}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('studentScheduleCard').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

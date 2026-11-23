@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Students - Faculty Portal</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <div class="brand-text">
+                <h2>Faculty Portal</h2>
+                <span>Academic Console</span>
+            </div>
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="/index.html">📊 Dashboard</a></li>
+            <li><a href="/students.html" class="active">👨‍🎓 Manage Students</a></li>
+            <li><a href="/marks.html">📝 Enter Marks</a></li>
+            <li><a href="/rankings.html">🏆 Class Rankings</a></li>
+            <li><a href="/analytics.html">📈 Class Analytics</a></li>
+            <li><a href="/schedule.html">⏰ Schedule Optimizer</a></li>
+            <li><a href="/reports.html">📄 Reports & PDF</a></li>
+        </ul>
+
+        <!-- Clean User Profile & Logout -->
+        <div class="sidebar-footer">
+            <p id="userDisplayName" style="font-weight: 600; color: var(--text-dark); margin-bottom: 2px;">Faculty</p>
+            <span id="userDisplayRole" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">👨‍🏫 Faculty Member</span>
+            <button onclick="logout()" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 6px; font-size: 11.5px;">
+                🚪 Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Student Management</h1>
+            <p>Faculty Console: Register new students, update their information, or remove records.</p>
+        </div>
+
+        <div id="studentAlert" class="alert"></div>
+
+        <!-- Add Student Form Card -->
+        <div class="card">
+            <div class="card-title">Register New Student</div>
+
+            <form id="addStudentForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="rollNumber">Roll Number *</label>
+                        <input type="text" id="rollNumber" placeholder="e.g. 24CS005" required>
+                        <small>Must be unique for each student.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="studentName">Full Name *</label>
+                        <input type="text" id="studentName" placeholder="e.g. Rahul Sharma" required>
+                        <small>Enter the student's legal name.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="studentEmail">Email Address</label>
+                        <input type="email" id="studentEmail" placeholder="e.g. rahul@college.edu">
+                        <small>Optional: used for sending report cards.</small>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">➕ Register Student</button>
+            </form>
+        </div>
+
+        <!-- Registered Students Table -->
+        <div class="card">
+            <div class="card-title">
+                <span>Registered Students List</span>
+                <span id="studentCountBadge" class="badge badge-rank-other">0 Students</span>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>Roll Number</th>
+                            <th>Student Name</th>
+                            <th>Email Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentsTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">Loading students...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        async function loadStudents() {
+            try {
+                const students = await API.getStudents();
+                const tbody = document.getElementById('studentsTableBody');
+                document.getElementById('studentCountBadge').textContent = `${students.length} Students`;
+                tbody.innerHTML = '';
+
+                if (!students || students.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 20px;">No students registered yet. Use the form above to add one.</td></tr>';
+                    return;
+                }
+
+                students.forEach(s => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${s.id}</td>
+                        <td><strong>${s.rollNumber}</strong></td>
+                        <td>${s.name}</td>
+                        <td>${s.email || '<span style="color: var(--text-muted);">Not provided</span>'}</td>
+                        <td>
+                            <button class="btn btn-danger" style="padding: 5px 12px; font-size: 11.5px;" onclick="handleDelete(${s.id}, '${s.name}')">
+                                🗑️ Delete
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                showAlert('studentAlert', err.message, false);
+            }
+        }
+
+        document.getElementById('addStudentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const roll = document.getElementById('rollNumber').value.trim();
+            const name = document.getElementById('studentName').value.trim();
+            const email = document.getElementById('studentEmail').value.trim();
+
+            try {
+                await API.addStudent({ rollNumber: roll, name: name, email: email });
+                showAlert('studentAlert', `Student '${name}' (Roll: ${roll}) registered successfully!`, true);
+                document.getElementById('addStudentForm').reset();
+                loadStudents();
+            } catch (err) {
+                showAlert('studentAlert', err.message, false);
+            }
+        });
+
+        async function handleDelete(id, name) {
+            if (!confirm(`Are you sure you want to delete ${name}? All associated marks and schedules will also be removed.`)) {
+                return;
+            }
+            try {
+                await API.deleteStudent(id);
+                showAlert('studentAlert', `Student '${name}' deleted successfully.`, true);
+                loadStudents();
+            } catch (err) {
+                showAlert('studentAlert', err.message, false);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = checkAuth('FACULTY');
+            if (!user) return;
+            loadStudents();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Rankings - Faculty Portal</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <div class="brand-text">
+                <h2>Faculty Portal</h2>
+                <span>Academic Console</span>
+            </div>
+        </div>
+
+        <ul class="nav-links">
+            <li><a href="/index.html">📊 Dashboard</a></li>
+            <li><a href="/students.html">👨‍🎓 Manage Students</a></li>
+            <li><a href="/marks.html">📝 Enter Marks</a></li>
+            <li><a href="/rankings.html" class="active">🏆 Class Rankings</a></li>
+            <li><a href="/analytics.html">📈 Class Analytics</a></li>
+            <li><a href="/schedule.html">⏰ Schedule Optimizer</a></li>
+            <li><a href="/reports.html">📄 Reports & PDF</a></li>
+        </ul>
+
+        <!-- Clean User Profile & Logout -->
+        <div class="sidebar-footer">
+            <p id="userDisplayName" style="font-weight: 600; color: var(--text-dark); margin-bottom: 2px;">Faculty</p>
+            <span id="userDisplayRole" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">👨‍🏫 Faculty Member</span>
+            <button onclick="logout()" class="btn btn-outline" style="width: 100%; justify-content: center; padding: 6px; font-size: 11.5px;">
+                🚪 Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="page-header">
+            <h1>Official Class Rankings</h1>
+            <p>Students ranked by overall percentage using custom Java Comparator. Equal percentages share the same rank.</p>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>Class Merit List</span>
+                <button class="btn btn-outline" onclick="loadRankings()" style="font-size: 12px; padding: 6px 14px;">🔄 Refresh Rankings</button>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Roll Number</th>
+                            <th>Student Name</th>
+                            <th>Total Marks</th>
+                            <th>Percentage</th>
+                            <th>Letter Grade</th>
+                            <th>Strongest Subject</th>
+                            <th>Weakest Subject</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rankingsTableBody">
+                        <tr>
+                            <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">Computing class rankings in Java...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script>
+        async function loadRankings() {
+            const tbody = document.getElementById('rankingsTableBody');
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">Loading rankings...</td></tr>';
+
+            try {
+                const rankings = await API.getRankings();
+                tbody.innerHTML = '';
+
+                if (!rankings || rankings.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 20px;">No student records found to rank.</td></tr>';
+                    return;
+                }
+
+                rankings.forEach(p => {
+                    let rankBadge = 'badge-rank-other';
+                    if (p.rank === 1) rankBadge = 'badge-rank-1';
+                    else if (p.rank === 2) rankBadge = 'badge-rank-2';
+                    else if (p.rank === 3) rankBadge = 'badge-rank-3';
+
+                    let gradeBadge = 'badge-grade-b';
+                    if (p.grade && p.grade.startsWith('A')) gradeBadge = 'badge-grade-a';
+                    else if (p.grade && p.grade.startsWith('F')) gradeBadge = 'badge-grade-fail';
+
+                    const highSub = p.highestScoringSubject ? `${p.highestScoringSubject.subject.name} (${p.highestScoringSubject.subjectPercentage.toFixed(0)}%)` : 'N/A';
+                    const lowSub = p.lowestScoringSubject ? `${p.lowestScoringSubject.subject.name} (${p.lowestScoringSubject.subjectPercentage.toFixed(0)}%)` : 'N/A';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><span class="badge ${rankBadge}">#${p.rank}</span></td>
+                        <td><strong>${p.student ? p.student.rollNumber : 'N/A'}</strong></td>
+                        <td>${p.student ? p.student.name : 'N/A'}</td>
+                        <td>${p.totalObtained.toFixed(1)} / ${p.totalMaxMarks.toFixed(1)}</td>
+                        <td><strong>${p.percentage.toFixed(2)}%</strong></td>
+                        <td><span class="badge ${gradeBadge}">${p.grade}</span></td>
+                        <td style="color: #047857; font-size: 12.5px;">⭐ ${highSub}</td>
+                        <td style="color: #b91c1c; font-size: 12.5px;">⚠️ ${lowSub}</td>
+                        <td>
+                            <a href="/schedule.html?roll=${encodeURIComponent(p.student.rollNumber)}" class="btn btn-primary" style="padding: 4px 10px; font-size: 11px;">
+                                ⏰ View Schedule
+                            </a>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--danger-red); padding: 20px;">${err.message}</td></tr>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = checkAuth('FACULTY');
+            if (!user) return;
+            loadRankings();
+        });
+    </script>
+</body>
+</html>

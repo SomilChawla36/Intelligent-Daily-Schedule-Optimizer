@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Study Schedule Optimizer</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            padding: 20px;
+        }
+        .auth-container {
+            width: 100%;
+            max-width: 440px;
+            background: #ffffff;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .auth-header {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
+            color: #ffffff;
+            padding: 30px 24px;
+            text-align: center;
+        }
+        .auth-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .auth-header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        .auth-body {
+            padding: 28px 24px;
+        }
+        .role-tabs {
+            display: flex;
+            background-color: var(--bg-light);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        .role-tab {
+            flex: 1;
+            padding: 9px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+        .role-tab.active {
+            background-color: #ffffff;
+            color: var(--primary-blue);
+            box-shadow: var(--shadow-sm);
+        }
+        .demo-box {
+            background-color: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: var(--radius-md);
+            padding: 12px;
+            margin-top: 20px;
+            font-size: 11.5px;
+            color: var(--text-muted);
+        }
+        .demo-box strong {
+            color: var(--text-dark);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1>Study Schedule Optimizer</h1>
+            <p>Please sign in to access your portal</p>
+        </div>
+
+        <div class="auth-body">
+            <!-- Role Toggle Tabs -->
+            <div class="role-tabs">
+                <div id="tabStudent" class="role-tab active" onclick="selectRole('STUDENT')">👨‍🎓 Student Portal</div>
+                <div id="tabFaculty" class="role-tab" onclick="selectRole('FACULTY')">👨‍🏫 Faculty Portal</div>
+            </div>
+
+            <div id="authAlert" class="alert"></div>
+
+            <form id="loginForm">
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Enter your username" required autofocus>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 22px;">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 14px;">
+                    🔐 Sign In
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 18px; font-size: 13px; color: var(--text-muted);">
+                Don't have an account? <a href="/signup.html" style="color: var(--primary-blue); font-weight: 600; text-decoration: none;">Sign Up here</a>
+            </div>
+
+            <!-- Demo Credentials for Easy Testing -->
+            <div class="demo-box">
+                <p><strong>Demo Login Credentials:</strong></p>
+                <p>• Faculty: <code>faculty</code> / <code>admin123</code></p>
+                <p>• Student: <code>aarav</code> / <code>student123</code> (Roll: 24CS001)</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script>
+        let currentRole = 'STUDENT';
+
+        function selectRole(role) {
+            currentRole = role;
+            document.getElementById('tabStudent').className = role === 'STUDENT' ? 'role-tab active' : 'role-tab';
+            document.getElementById('tabFaculty').className = role === 'FACULTY' ? 'role-tab active' : 'role-tab';
+
+            if (role === 'FACULTY') {
+                document.getElementById('username').value = 'faculty';
+                document.getElementById('password').value = 'admin123';
+            } else {
+                document.getElementById('username').value = 'aarav';
+                document.getElementById('password').value = 'student123';
+            }
+        }
+
+        // Auto pre-fill student demo credentials for quick access
+        selectRole('STUDENT');
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+
+            try {
+                const response = await API.login(u, p);
+                showAlert('authAlert', 'Sign in successful! Redirecting...', true);
+                setTimeout(() => {
+                    window.location.href = response.redirectUrl;
+                }, 600);
+            } catch (err) {
+                showAlert('authAlert', err.message, false);
+            }
+        });
+    </script>
+</body>
+</html>
