@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["jdk17", "maven"]
+
+[phases.build]
+cmds = ["mvn clean package -DskipTests -B"]
+
+[start]
+cmd = "java -jar target/schedule-optimizer-1.0.0.jar"
